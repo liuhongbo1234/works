@@ -6,12 +6,22 @@ public class CacheInfo {
     private String name;
     private String packageName;
     private Drawable icon;
+    //应用版本
+    private String versionName;
     //应用大小
     private String codeSize;
     //数据大小
     private String dataSize;
     //缓存大小
     private String cacheSize;
+
+    public void setVersionName(String versionName) {
+        this.versionName = versionName;
+    }
+
+    public String getVersionName() {
+        return versionName;
+    }
 
     public String getName() {
         return name;

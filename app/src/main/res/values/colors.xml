@@ -1,6 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorPrimary">#6200EE</color>
-    <color name="colorPrimaryDark">#3700B3</color>
+    <color name="colorPrimaryDark">#FF2c5aa9</color>
     <color name="colorAccent">#03DAC5</color>
+    <color name="white">#FFFFFF</color>
+    <item name="gray_drawable" type="drawable">#FF2c5aa9</item>
+    <color name="green_6a">#FF2c5aa9</color>
+    <item name="title_bg" type="color">#FF2c5aa9</item>
+    <integer-array name="gplus_colors">
+        <item>@color/gplus_color_1</item>
+        <item>@color/gplus_color_2</item>
+        <item>@color/gplus_color_3</item>
+        <item>@color/gplus_color_4</item>
+    </integer-array>
+    <color name="gplus_color_1">#3e802f</color>
+    <color name="gplus_color_2">#f4b400</color>
+    <color name="gplus_color_3">#427fed</color>
+    <color name="gplus_color_4">#b23424</color>
 </resources>

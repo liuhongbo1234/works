@@ -25,24 +25,21 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.UUID;
 import java.util.Vector;
 
 public class CacheInfoProvider {
-    private Handler handler;
     private PackageManager packageManager;
     private Vector<CacheInfo> cacheInfos;
     private int size = 0;
     private Context context;
 
-    public CacheInfoProvider(Handler handler, Vector<CacheInfo> cacheInfos, Context context) {
+    public CacheInfoProvider(Vector<CacheInfo> cacheInfos, Context context) {
         // 拿到一个包管理器
         packageManager = context.getPackageManager();
-        this.handler = handler;
         this.cacheInfos = cacheInfos;
         this.context = context;
-
         initCacheInfos();
-
     }
 
     public void initCacheInfos() {
@@ -50,104 +47,54 @@ public class CacheInfoProvider {
         List<PackageInfo> packageInfos = packageManager
                 .getInstalledPackages(PackageManager.GET_UNINSTALLED_PACKAGES);
         size = packageInfos.size();
-
-
         for (int i = 0; i < size; i++) {
             PackageInfo packageInfo = packageInfos.get(i);
-            CacheInfo cacheInfo = new CacheInfo();
-            // 拿到包名
-            String packageName = packageInfo.packageName;
-            cacheInfo.setPackageName(packageName);
-
             // 拿到应用程序的信息
             ApplicationInfo applicationInfo = packageInfo.applicationInfo;
             // 拿到应用程序的程序名
             String name = applicationInfo.loadLabel(packageManager).toString();
+            // 过滤掉一些存储空间占用太小的应用
+            if (name.length() > 12) continue;
+
+            CacheInfo cacheInfo = new CacheInfo();
+            // 设置程序名称
             cacheInfo.setName(name);
+            // 拿到包名
+            String packageName = packageInfo.packageName;
+            cacheInfo.setPackageName(packageName);
             // 拿到应用程序的图标
             Drawable icon = applicationInfo.loadIcon(packageManager);
             cacheInfo.setIcon(icon);
-
-            cacheInfo.setCacheSize(TextFormater.dataSizeFormat(getCacheSize(packageName)));
+            String versionName = packageInfo.versionName;
+            cacheInfo.setVersionName(versionName);
+            // 获取缓存，用户数据，APP大小
+            setData(cacheInfo, applicationInfo);
             cacheInfos.add(cacheInfo);
-//            initDataSize(cacheInfo, i);
         }
     }
 
-    private long getCacheSize(String mPackageName) {
-//        StorageManager storageManager = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
+
+    private void setData(CacheInfo cacheInfo, ApplicationInfo applicationInfo) {
+        String packageName = cacheInfo.getPackageName();
+        UUID uuid = applicationInfo.storageUuid;
         StorageStatsManager storageStatsManager = (StorageStatsManager) context.getSystemService(Context.STORAGE_STATS_SERVICE);
-
+        int uid = 0;
+        StorageStats storageStats = null;
         try {
-            StorageStats storageStats = storageStatsManager.queryStatsForPackage(StorageManager.UUID_DEFAULT, mPackageName, Process.myUserHandle());
-            Log.d("liuhongbo", storageStats.getAppBytes() + "111");
-            return storageStats.getCacheBytes();
+            uid = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA).uid;
+            storageStats = storageStatsManager.queryStatsForUid(uuid, uid);
+            cacheInfo.setCacheSize(TextFormater.dataSizeFormat(storageStats.getCacheBytes()));
+            cacheInfo.setCodeSize(TextFormater.dataSizeFormat(storageStats.getAppBytes()));
+            cacheInfo.setDataSize(TextFormater.dataSizeFormat(storageStats.getDataBytes()));
+            Log.d("liuhongbo", cacheInfo.getCacheSize() + "");
         } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
+            Log.d("liuhongbo", e.getMessage() + "");
         } catch (IOException e) {
-            e.printStackTrace();
-        } catch (SecurityException e) {
-            e.printStackTrace();
-        }
-        return 0L;
-    }
-
-    /**
-     * 通过AIDL的方法来获取到应用的缓存信息，getPackageSizeInfo是PackageManager里面的一个私有方法来的
-     * 我们通过反射就可以调用到它的了，但是这个方法里面会传递一个IPackageStatsObserver.Stub的对象
-     * 里面就可能通过AIDL来获取我们想要的信息了
-     * <p>
-     * 因为这样的调用是异步的，所以当我们完成获取完这些信息之后，我们就通过handler来发送一个消息
-     * 来通知我们的应用，通过getCacheInfos来获取到我们的Vector
-     * <p>
-     * 为什么要用Vector呢，因为下面的方法是异步的，也就是有可能是多线程操作，所以我们就用了线程安全的Vector
-     *
-     * @param cacheInfo
-     * @param position
-     */
-    private void initDataSize(final CacheInfo cacheInfo, final int position) {
-        try {
-            Method method = PackageManager.class.getMethod(
-                    "getPackageSizeInfo", new Class[]{String.class,
-                            IPackageStatsObserver.class});
-            method.invoke(packageManager,
-                    new Object[]{cacheInfo.getPackageName(),
-                            new IPackageStatsObserver.Stub() {
-                                @Override
-                                public void onGetStatsCompleted(
-                                        PackageStats pStats, boolean succeeded)
-                                        throws RemoteException {
-                                    System.out.println("onGetStatsCompleted" + position);
-                                    long cacheSize = pStats.cacheSize;
-                                    long codeSize = pStats.codeSize;
-                                    long dataSize = pStats.dataSize;
-
-                                    cacheInfo.setCacheSize(TextFormater
-                                            .dataSizeFormat(cacheSize));
-                                    cacheInfo.setCodeSize(TextFormater
-                                            .dataSizeFormat(codeSize));
-                                    cacheInfo.setDataSize(TextFormater
-                                            .dataSizeFormat(dataSize));
-
-                                    cacheInfos.add(cacheInfo);
-
-                                    if (position == (size - 1)) {
-                                        // 当完全获取完信息之后，发送一个成功的消息
-                                        // 1对应的就是CacheClearActivity里面的FINISH
-                                        handler.sendEmptyMessage(1);
-                                    }
-                                }
-                            }});
-        } catch (Exception e) {
-            e.printStackTrace();
+            Log.d("liuhongbo", e.getMessage() + "");
         }
     }
 
-    public Vector<CacheInfo> getCacheInfos() {
-        return cacheInfos;
-    }
-
-    public void setCacheInfos(Vector<CacheInfo> cacheInfos) {
-        this.cacheInfos = cacheInfos;
-    }
+//    public Vector<CacheInfo> getCacheInfos() {
+//        return cacheInfos;
+//    }
 }

@@ -4,14 +4,28 @@ import android.graphics.drawable.Drawable;
 
 public class CacheListItem {
     private long mCacheSize;
-    private String mPackageName, mApplicationName;
+    private long mDataSize;
+    private long mCodeSize;
+    private String mPackageName, mApplicationName, mAppVersion;
     private Drawable mIcon;
+    private boolean checked = true;
 
-    public CacheListItem(String packageName, String applicationName, Drawable icon, long cacheSize) {
+    public CacheListItem(String packageName, String applicationName, String appVersion, Drawable icon, long cacheSize, long dataSize, long codeSize) {
         mCacheSize = cacheSize;
         mPackageName = packageName;
         mApplicationName = applicationName;
+        mAppVersion = appVersion;
         mIcon = icon;
+        mDataSize = dataSize;
+        mCodeSize = codeSize;
+    }
+
+    public boolean getChecked() {
+        return checked;
+    }
+
+    public void setChecked(boolean checked) {
+        this.checked = checked;
     }
 
     public Drawable getApplicationIcon() {
@@ -26,7 +40,19 @@ public class CacheListItem {
         return mCacheSize;
     }
 
+    public long getDataSize() {
+        return mDataSize;
+    }
+
+    public long getCodeSize() {
+        return mCodeSize;
+    }
+
     public String getPackageName() {
         return mPackageName;
+    }
+
+    public String getAppVersion() {
+        return mAppVersion;
     }
 }
